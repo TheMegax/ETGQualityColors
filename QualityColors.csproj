@@ -45,9 +45,6 @@
     <Reference Include="0Harmony, Version=2.7.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\HarmonyX.2.7.0\lib\net35\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="Alexandria, Version=0.1.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\EtG.Alexandria.0.4.9\lib\net35\Alexandria.dll</HintPath>
-    </Reference>
     <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\EtG.GameLibs.2.1.9.1\lib\net35\Assembly-CSharp.dll</HintPath>
     </Reference>
@@ -83,6 +80,9 @@
     </Reference>
     <Reference Include="PlayMaker, Version=1.6.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\EtG.GameLibs.2.1.9.1\lib\net35\PlayMaker.dll</HintPath>
+    </Reference>
+    <Reference Include="RadialGunSelect">
+      <HintPath>..\..\AppData\Roaming\com.kesomannen.gale\enter-the-gungeon\profiles\Default\BepInEx\plugins\Morphious86-WeaponWheelSelect\WeaponWheelSelect.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">

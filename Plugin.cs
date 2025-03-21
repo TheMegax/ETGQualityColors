@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using BepInEx;
+using BepInEx.Bootstrap;
 using HarmonyLib;
+using RadialGunSelect;
 using UnityEngine;
 using OpCodes = System.Reflection.Emit.OpCodes;
 // ReSharper disable InconsistentNaming
@@ -10,6 +12,7 @@ using OpCodes = System.Reflection.Emit.OpCodes;
 namespace Mod;
 
 [BepInDependency(ETGModMainBehaviour.GUID)]
+[BepInDependency("morphious86.etg.radialgunselect", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInPlugin(GUID, NAME, VERSION)]
 public class Plugin : BaseUnityPlugin
 {
@@ -26,7 +29,23 @@ public class Plugin : BaseUnityPlugin
     public void GMStart(GameManager g)
     {
         var harmony = new Harmony(GUID);
-        harmony.PatchAll();
+        harmony.PatchAll(typeof(Gun_OnExitRange_Patch));
+        harmony.PatchAll(typeof(Gun_DropGun_Patch));
+        harmony.PatchAll(typeof(PassiveItem_Start_Patch));
+        harmony.PatchAll(typeof(PassiveItem_Drop_Patch));
+        harmony.PatchAll(typeof(PlayerItem_Start_Patch));
+        harmony.PatchAll(typeof(PlayerItem_OnExitRange_Patch));
+        harmony.PatchAll(typeof(RewardPedestal_DetermineContents_Patch));
+        harmony.PatchAll(typeof(RewardPedestal_OnExitRange_Patch));
+        harmony.PatchAll(typeof(AmmonomiconPokedexEntry_UpdateSynergyHighlights_Patch));
+        harmony.PatchAll(typeof(AmmonomiconPokedexEntry_LostFocus_Patch));
+        harmony.PatchAll(typeof(AmmonomiconPageRenderer_DoRefreshData_Patch));
+
+        if (Chainloader.PluginInfos.ContainsKey("morphious86.etg.radialgunselect"))
+        {
+            harmony.PatchAll(typeof(RadialSegment_SetHovered_Patch));
+        }
+        
         Log($"{NAME} v{VERSION} started successfully.", TEXT_COLOR);
     }
 
@@ -252,6 +271,25 @@ public class Plugin : BaseUnityPlugin
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.m_childSprite, true);
             SetOutlineColor(pickupObj.quality);
             SpriteOutlineManager.AddScaledOutlineToSprite<tk2dClippedSprite>(__instance.m_childSprite, _outlineColor, 0.1f, 0f);
+        }
+    }
+
+    [HarmonyPatch(typeof(RadialSegment), nameof(RadialSegment.SetHovered))]
+    public static class RadialSegment_SetHovered_Patch
+    {
+        // Sorry for replacing your code Morphious87 ^^"
+        private static void Postfix(
+            bool hovered, Color ___hoveredOutlineColor, Color ___unhoveredOutlineColor,
+            Material ___material, tk2dSprite[] ___gunOutlineSprites, tk2dClippedSprite ___gunSprite, Gun ___originalGun)
+        {
+            var oCol = hovered ? ___hoveredOutlineColor : ___unhoveredOutlineColor;
+            ___material.SetColor("_OutlineColor", oCol);
+
+            if (___gunOutlineSprites == null) return;
+            SetOutlineColor(___originalGun.quality);
+            
+            SpriteOutlineManager.RemoveOutlineFromSprite(___gunSprite);
+            SpriteOutlineManager.AddOutlineToSprite(___gunSprite, _outlineColor, 0.1f);
         }
     }
 }
