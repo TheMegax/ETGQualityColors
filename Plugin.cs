@@ -253,28 +253,33 @@ public class Plugin : BaseUnityPlugin
     [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.InitializeInternal))]
     public static class ShopItemController_InitializeInternal_Patch
     {
-        private static void Prefix(PickupObject i)
+        private static void Postfix(ShopItemController __instance, PickupObject i)
         {
-            SetOutlineColor(i.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
+            var pickupType = i.GetType();
+            var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
+            var isClass = i is PlayerItem or PassiveItem or Gun;
+            var isBlank = i.name == "Blank";
+            SpriteOutlineManager.RemoveOutlineFromSprite(__instance.sprite);
+            SetOutlineColor(isSubclass || isClass || !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
+            if (_outlineColor != Color.black)
+                SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
         }
     }
     
     [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.OnExitRange))]
     public static class ShopItemController_OnExitRange_Patch
     {
-        private static void Prefix(ShopItemController __instance)
+        private static void Postfix(ShopItemController __instance)
         {
-            SetOutlineColor(__instance.item.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
+            var i = __instance.item;
+            var pickupType = i.GetType();
+            var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
+            var isClass = i is PlayerItem or PassiveItem or Gun;
+            var isBlank = i.name == "Blank";
+            SpriteOutlineManager.RemoveOutlineFromSprite(__instance.sprite);
+            SetOutlineColor(isSubclass || isClass || !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
+            if (_outlineColor != Color.black)
+                SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
         }
     }
     
