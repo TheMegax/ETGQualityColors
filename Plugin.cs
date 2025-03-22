@@ -258,9 +258,9 @@ public class Plugin : BaseUnityPlugin
             var pickupType = i.GetType();
             var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
             var isClass = i is PlayerItem or PassiveItem or Gun;
-            var isBlank = i.name == "Blank";
+            var isBlank = i.itemName == "Blank";
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.sprite);
-            SetOutlineColor(isSubclass || isClass || !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
+            SetOutlineColor((isSubclass || isClass) && !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
             if (_outlineColor != Color.black)
                 SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
         }
@@ -275,9 +275,9 @@ public class Plugin : BaseUnityPlugin
             var pickupType = i.GetType();
             var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
             var isClass = i is PlayerItem or PassiveItem or Gun;
-            var isBlank = i.name == "Blank";
+            var isBlank = i.itemName == "Blank";
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.sprite);
-            SetOutlineColor(isSubclass || isClass || !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
+            SetOutlineColor((isSubclass || isClass) && !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
             if (_outlineColor != Color.black)
                 SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
         }
