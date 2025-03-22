@@ -49,14 +49,17 @@ public class Plugin : BaseUnityPlugin
     public void GMStart(GameManager g)
     {
         var harmony = new Harmony(GUID);
-        harmony.PatchAll(typeof(Gun_OnExitRange_Patch));
         harmony.PatchAll(typeof(Gun_DropGun_Patch));
+        harmony.PatchAll(typeof(Gun_OnExitRange_Patch));
         harmony.PatchAll(typeof(PassiveItem_Start_Patch));
         harmony.PatchAll(typeof(PassiveItem_Drop_Patch));
+        harmony.PatchAll(typeof(PassiveItem_OnExitRange_Patch));
         harmony.PatchAll(typeof(PlayerItem_Start_Patch));
         harmony.PatchAll(typeof(PlayerItem_OnExitRange_Patch));
         harmony.PatchAll(typeof(RewardPedestal_DetermineContents_Patch));
         harmony.PatchAll(typeof(RewardPedestal_OnExitRange_Patch));
+        harmony.PatchAll(typeof(ShopItemController_InitializeInternal_Patch));
+        harmony.PatchAll(typeof(ShopItemController_OnExitRange_Patch));
         harmony.PatchAll(typeof(AmmonomiconPokedexEntry_UpdateSynergyHighlights_Patch));
         harmony.PatchAll(typeof(AmmonomiconPokedexEntry_LostFocus_Patch));
         harmony.PatchAll(typeof(AmmonomiconPageRenderer_DoRefreshData_Patch));
@@ -239,6 +242,34 @@ public class Plugin : BaseUnityPlugin
         private static void Prefix(RewardPedestal __instance)
         {
             SetOutlineColor(__instance.contents.quality);
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            return ColorReplacer(instructions);
+        }
+    }
+    
+    [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.InitializeInternal))]
+    public static class ShopItemController_InitializeInternal_Patch
+    {
+        private static void Prefix(PickupObject i)
+        {
+            SetOutlineColor(i.quality);
+        }
+
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            return ColorReplacer(instructions);
+        }
+    }
+    
+    [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.OnExitRange))]
+    public static class ShopItemController_OnExitRange_Patch
+    {
+        private static void Prefix(ShopItemController __instance)
+        {
+            SetOutlineColor(__instance.item.quality);
         }
 
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
