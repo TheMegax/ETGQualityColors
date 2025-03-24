@@ -20,7 +20,7 @@ public class Plugin : BaseUnityPlugin
 {
     private const string GUID = "megax.etg.qualitycolors";
     private const string NAME = "Quality Colors";
-    private const string VERSION = "1.0.0";
+    private const string VERSION = "1.0.1";
     private const string TEXT_COLOR = "#00FFFF";
 
     private static ConfigEntry<Color> SQualityColor;
@@ -227,10 +227,7 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Postfix()
         {
-            if (AmmonomiconController.Instance.BestInteractingLeftPageRenderer == null)
-            {
-                return;
-            }
+            if (AmmonomiconController.Instance.BestInteractingLeftPageRenderer == null) return;
             
             var pokedexEntries = AmmonomiconController.Instance.BestInteractingLeftPageRenderer.GetPokedexEntries();
             
@@ -250,6 +247,9 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Postfix(AmmonomiconPokedexEntry __instance)
         {
+            if (!__instance.IsEquipmentPage)
+                return;
+
             var objs = PickupObjectDatabase.Instance.Objects;
 
             if (__instance.pickupID < 0 || __instance.pickupID >= objs.Count)
