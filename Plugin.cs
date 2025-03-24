@@ -19,7 +19,7 @@ public class Plugin : BaseUnityPlugin
 {
     private const string GUID = "megax.etg.qualitycolors";
     private const string NAME = "Quality Colors";
-    private const string VERSION = "1.0.0";
+    private const string VERSION = "1.0.1";
     private const string TEXT_COLOR = "#00FFFF";
 
     private static ConfigEntry<Color> SQualityColor;
@@ -306,10 +306,7 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Postfix()
         {
-            if (AmmonomiconController.Instance.BestInteractingLeftPageRenderer == null)
-            {
-                return;
-            }
+            if (AmmonomiconController.Instance.BestInteractingLeftPageRenderer == null) return;
             
             var pokedexEntries = AmmonomiconController.Instance.BestInteractingLeftPageRenderer.GetPokedexEntries();
             
@@ -329,6 +326,9 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Postfix(AmmonomiconPokedexEntry __instance)
         {
+            if (!__instance.IsEquipmentPage) return;
+            if (__instance.pickupID < 0) return;
+            
             var pickupObj = PickupObjectDatabase.Instance.Objects[__instance.pickupID];
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.m_childSprite, true);
             SetOutlineColor(pickupObj.quality);
