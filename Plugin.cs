@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
@@ -20,7 +19,7 @@ public class Plugin : BaseUnityPlugin
 {
     private const string GUID = "megax.etg.qualitycolors";
     private const string NAME = "Quality Colors";
-    private const string VERSION = "1.0.1";
+    private const string VERSION = "1.0.2";
     private const string TEXT_COLOR = "#00FFFF";
 
     private static ConfigEntry<Color> SQualityColor;
