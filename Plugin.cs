@@ -4,9 +4,10 @@ using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
 using RadialGunSelect;
 using UnityEngine;
-using OpCodes = System.Reflection.Emit.OpCodes;
 // ReSharper disable InconsistentNaming
 // ReSharper disable UnusedMember.Local
 
@@ -49,17 +50,10 @@ public class Plugin : BaseUnityPlugin
     public void GMStart(GameManager g)
     {
         var harmony = new Harmony(GUID);
-        harmony.PatchAll(typeof(Gun_DropGun_Patch));
-        harmony.PatchAll(typeof(Gun_OnExitRange_Patch));
-        harmony.PatchAll(typeof(PassiveItem_Start_Patch));
-        harmony.PatchAll(typeof(PassiveItem_Drop_Patch));
-        harmony.PatchAll(typeof(PassiveItem_OnExitRange_Patch));
-        harmony.PatchAll(typeof(PlayerItem_Start_Patch));
-        harmony.PatchAll(typeof(PlayerItem_OnExitRange_Patch));
+        harmony.PatchAll(typeof(PickupObject_Patch));
         harmony.PatchAll(typeof(RewardPedestal_DetermineContents_Patch));
         harmony.PatchAll(typeof(RewardPedestal_OnExitRange_Patch));
-        harmony.PatchAll(typeof(ShopItemController_InitializeInternal_Patch));
-        harmony.PatchAll(typeof(ShopItemController_OnExitRange_Patch));
+        harmony.PatchAll(typeof(ShopItemController_Patch));
         harmony.PatchAll(typeof(AmmonomiconPokedexEntry_UpdateSynergyHighlights_Patch));
         harmony.PatchAll(typeof(AmmonomiconPokedexEntry_LostFocus_Patch));
         harmony.PatchAll(typeof(AmmonomiconPageRenderer_DoRefreshData_Patch));
@@ -85,9 +79,14 @@ public class Plugin : BaseUnityPlugin
     private static Color _outlineColor = Color.black;
     private static readonly int OutlineColor = Shader.PropertyToID("_OutlineColor");
 
-    private static Color GetOutlineColor()
+    private static Color ReplaceOutlineColor(Color _)
     {
         return _outlineColor;
+    }
+
+    private static float ReplaceFloatArg(float _)
+    {
+        return 0f;
     }
 
     private static void SetOutlineColor(PickupObject.ItemQuality quality)
@@ -105,123 +104,50 @@ public class Plugin : BaseUnityPlugin
         };
     }
 
-    private static IEnumerable<CodeInstruction> ColorReplacer(IEnumerable<CodeInstruction> instructions)
+    private static void ColorReplacer(ILContext ctx)
     {
-        return new CodeMatcher(instructions)
-            .MatchForward(
-                false,
-                new CodeMatch(
-                    OpCodes.Call, AccessTools.PropertyGetter(typeof(Color),
-                        nameof(Color.black))
-                )
-            ).SetInstructionAndAdvance(
-                new CodeInstruction(
-                    OpCodes.Call, AccessTools.Method(typeof(Plugin), nameof(GetOutlineColor))
-                )
-            ).MatchForward(
-                true,
-                new CodeMatch(OpCodes.Ldc_R4),
-                new CodeMatch(OpCodes.Ldc_R4)
-            ).SetOperandAndAdvance(0f).InstructionEnumeration();
-    }
-    
-    // This is rather stupid, but despite what the docs say it seemingly only lets me do this one by one
-    // I probably messed up somewhere yup
-    [HarmonyPatch(typeof(Gun), nameof(Gun.OnExitRange))]
-    public static class Gun_OnExitRange_Patch
-    {
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        var crs = new ILCursor(ctx);
+
+        if (!crs.TryGotoNext(MoveType.After, x => x.MatchCallOrCallvirt<Color>($"get_{nameof(Color.black)}")))
+            return;
+
+        crs.Emit(OpCodes.Call, AccessTools.Method(typeof(Plugin), nameof(ReplaceOutlineColor)));
+
+        for (var i = 0; i < 2; i++)
         {
-            return ColorReplacer(instructions);
+            if (!crs.TryGotoNext(MoveType.After, x => x.MatchLdcR4(out _)))
+                return;
         }
 
+        crs.Emit(OpCodes.Call, AccessTools.Method(typeof(Plugin), nameof(ReplaceFloatArg)));
+    }
+    
+    public static class PickupObject_Patch
+    {
+        // Patching multiple methods only works if the HarmonyPatch attributes are applied to the patch methods and not the class for some reason.
+
+        [HarmonyPatch(typeof(Gun), nameof(Gun.OnExitRange))]
+        [HarmonyPatch(typeof(Gun), nameof(Gun.DropGun))]
+        [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.Start))]
+        [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.Drop))]
+        [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.OnExitRange))]
+        [HarmonyPatch(typeof(PlayerItem), nameof(PlayerItem.Start))]
+        [HarmonyPatch(typeof(PlayerItem), nameof(PlayerItem.OnExitRange))]
+        private static void ILManipulator(ILContext ctx)
+        {
+            ColorReplacer(ctx);
+        }
+
+        [HarmonyPatch(typeof(Gun), nameof(Gun.OnExitRange))]
+        [HarmonyPatch(typeof(Gun), nameof(Gun.DropGun))]
+        [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.Start))]
+        [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.Drop))]
+        [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.OnExitRange))]
+        [HarmonyPatch(typeof(PlayerItem), nameof(PlayerItem.Start))]
+        [HarmonyPatch(typeof(PlayerItem), nameof(PlayerItem.OnExitRange))]
         private static void Prefix(PickupObject __instance)
         {
             SetOutlineColor(__instance.quality);
-        }
-    }
-    
-    [HarmonyPatch(typeof(Gun), nameof(Gun.DropGun))]
-    public static class Gun_DropGun_Patch
-    {
-        private static void Prefix(PickupObject __instance)
-        {
-            SetOutlineColor(__instance.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
-        }
-    }
-    
-    [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.Start))]
-    public static class PassiveItem_Start_Patch
-    {
-        private static void Prefix(PickupObject __instance)
-        {
-            SetOutlineColor(__instance.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
-        }
-    }
-    
-    [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.Drop))]
-    public static class PassiveItem_Drop_Patch
-    {
-        private static void Prefix(PickupObject __instance)
-        {
-            SetOutlineColor(__instance.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
-        }
-    }
-    
-    [HarmonyPatch(typeof(PassiveItem), nameof(PassiveItem.OnExitRange))]
-    public static class PassiveItem_OnExitRange_Patch
-    {
-        private static void Prefix(PickupObject __instance)
-        {
-            SetOutlineColor(__instance.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
-        }
-    }
-    
-    [HarmonyPatch(typeof(PlayerItem), nameof(PlayerItem.Start))]
-    public static class PlayerItem_Start_Patch
-    {
-        private static void Prefix(PickupObject __instance)
-        {
-            SetOutlineColor(__instance.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
-        }
-    }
-    
-    [HarmonyPatch(typeof(PlayerItem), nameof(PlayerItem.OnExitRange))]
-    public static class PlayerItem_OnExitRange_Patch
-    {
-        private static void Prefix(PickupObject __instance)
-        {
-            SetOutlineColor(__instance.quality);
-        }
-
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            return ColorReplacer(instructions);
         }
     }
     
@@ -230,6 +156,9 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Postfix(RewardPedestal __instance)
         {
+            if (__instance.contents == null || __instance.m_itemDisplaySprite == null)
+                return;
+
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.m_itemDisplaySprite);
             SetOutlineColor(__instance.contents.quality);
             SpriteOutlineManager.AddOutlineToSprite(__instance.m_itemDisplaySprite, _outlineColor, 0.1f, 0.05f);
@@ -241,37 +170,29 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Prefix(RewardPedestal __instance)
         {
+            if(__instance.contents == null)
+                return;
+
             SetOutlineColor(__instance.contents.quality);
         }
 
-        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        private static void ILManipulator(ILContext ctx)
         {
-            return ColorReplacer(instructions);
+            ColorReplacer(ctx);
         }
     }
-    
-    [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.InitializeInternal))]
-    public static class ShopItemController_InitializeInternal_Patch
+
+    public static class ShopItemController_Patch
     {
-        private static void Postfix(ShopItemController __instance, PickupObject i)
-        {
-            var pickupType = i.GetType();
-            var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
-            var isClass = i is PlayerItem or PassiveItem or Gun;
-            var isBlank = i.itemName == "Blank";
-            SpriteOutlineManager.RemoveOutlineFromSprite(__instance.sprite);
-            SetOutlineColor((isSubclass || isClass) && !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
-            if (_outlineColor != Color.black)
-                SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
-        }
-    }
-    
-    [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.OnExitRange))]
-    public static class ShopItemController_OnExitRange_Patch
-    {
+        [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.OnExitRange))]
+        [HarmonyPatch(typeof(ShopItemController), nameof(ShopItemController.InitializeInternal))]
         private static void Postfix(ShopItemController __instance)
         {
             var i = __instance.item;
+
+            if (i == null || __instance.sprite == null)
+                return;
+
             var pickupType = i.GetType();
             var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
             var isClass = i is PlayerItem or PassiveItem or Gun;
@@ -326,10 +247,15 @@ public class Plugin : BaseUnityPlugin
     {
         private static void Postfix(AmmonomiconPokedexEntry __instance)
         {
-            if (!__instance.IsEquipmentPage) return;
-            if (__instance.pickupID < 0) return;
-            
-            var pickupObj = PickupObjectDatabase.Instance.Objects[__instance.pickupID];
+            if (!__instance.IsEquipmentPage)
+                return;
+
+            var objs = PickupObjectDatabase.Instance.Objects;
+
+            if (__instance.pickupID < 0 || __instance.pickupID >= objs.Count)
+                return;
+
+            var pickupObj = objs[__instance.pickupID];
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.m_childSprite, true);
             SetOutlineColor(pickupObj.quality);
             SpriteOutlineManager.AddScaledOutlineToSprite<tk2dClippedSprite>(__instance.m_childSprite, _outlineColor, 0.1f, 0f);
