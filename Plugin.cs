@@ -196,10 +196,13 @@ public class Plugin : BaseUnityPlugin
             var isSubclass = pickupType.IsSubclassOf(typeof(PlayerItem)) || pickupType.IsSubclassOf(typeof(PassiveItem)) || pickupType.IsSubclassOf(typeof(Gun));
             var isClass = i is PlayerItem or PassiveItem or Gun;
             var isBlank = i.itemName == "Blank";
+
+            var isColorable = (isSubclass || isClass) && !isBlank;
+            if (!isColorable) return;
+            
             SpriteOutlineManager.RemoveOutlineFromSprite(__instance.sprite);
-            SetOutlineColor((isSubclass || isClass) && !isBlank ? i.quality : PickupObject.ItemQuality.EXCLUDED);
-            if (_outlineColor != Color.black)
-                SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
+            SetOutlineColor(i.quality);
+            SpriteOutlineManager.AddOutlineToSprite(__instance.sprite, _outlineColor);
         }
     }
     
